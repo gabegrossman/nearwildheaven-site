@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap">
 <style>
   /* Layout: same terminal printout as keyspan.org. One column, lowercase, one monospace face, black and white.
-     The chrome render plays smooth around the label name (caps). The letters are solid white blocks;
+     The chrome render plays smooth around the label name (caps). The letters are solid blocks in the ink;
      where the render passes behind them it punches through as black 1-bit dither dots.
      Every so often the picture takes a TV signal fault. */
   :root {
@@ -26,6 +26,7 @@
     --ink: #ffffff;
     --ink-muted: #a3a3a3;
     --line: #333333;
+    --mask: #ffffff;
     --scan: rgba(255, 255, 255, 0.035);
     --band: rgba(255, 255, 255, 0.05);
     --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -75,9 +76,6 @@
 
   .bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
   .bar .g { white-space: nowrap; overflow: hidden; }
-  .ks { display: block; line-height: 0; padding: 4px; flex: 0 0 auto; }
-  .ks img { display: block; width: 92px; height: auto; }
-  .ks:hover { background: none; opacity: 0.6; }
 
   .stage { align-self: center; display: grid; gap: 10px; }
   .frame { position: relative; padding: 14px; }
@@ -94,7 +92,7 @@
   .hero .smooth { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .name {
     margin: 0;
-    font: 700 clamp(52px, 15vw, 172px)/0.88 var(--mono);
+    font: 700 clamp(46px, 13.5vw, 150px)/0.88 var(--mono);
     letter-spacing: -0.04em;
     text-transform: uppercase;
     padding: 0.12em 0.06em 0.16em;
@@ -103,8 +101,8 @@
   .mask { position: relative; color: var(--ground); }
   .cut { position: absolute; inset: 0; mix-blend-mode: screen; isolation: isolate; background: var(--ground); }
   .cut canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
-  .cut .name { position: absolute; inset: 0; background: var(--ground); color: var(--ink); mix-blend-mode: multiply; }
-  .hero .snow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; mix-blend-mode: screen; image-rendering: pixelated; pointer-events: none; }
+  .cut .name { position: absolute; inset: 0; background: var(--ground); color: var(--mask); mix-blend-mode: multiply; }
+  .snow { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9; opacity: 0; mix-blend-mode: screen; image-rendering: pixelated; pointer-events: none; }
 
   .strip { margin: 0; font-family: var(--glyph); color: var(--ink-muted); white-space: nowrap; overflow: hidden; letter-spacing: 0.1em; font-size: 12px; }
 
@@ -119,7 +117,6 @@
   @media (max-width: 640px) {
     :root { --size: 12px; }
     .page { gap: 28px; }
-    .ks img { width: 76px; }
     .line { font-size: 13px; }
     .frame { padding: 10px; }
   }
@@ -134,11 +131,12 @@
   </filter>
 </svg>
 
+<canvas class="snow" id="snow" aria-hidden="true"></canvas>
+
 <div class="page">
 
   <div class="bar">
     <span class="g" aria-hidden="true">&#9618;&#9617; nwh &#8961; 34.1010&deg;n 118.3358&deg;w</span>
-    <a class="ks" href="https://keyspan.org" title="Keyspan"><img src="brand/keyspan-wordmark-white.svg" alt="Keyspan" width="1610" height="143"></a>
   </div>
 
   <div class="stage">
@@ -157,15 +155,14 @@ heaven</h1>
 wild
 heaven</p>
         </div>
-        <canvas class="snow" id="snow" aria-hidden="true"></canvas>
       </div>
     </div>
     <p class="strip" id="strip" aria-hidden="true"></p>
   </div>
 
   <div class="copy">
-    <span class="g" aria-hidden="true">&#10022;<br>&#8756;</span>
-    <p class="line">not near enough.<br>la-based label for warped beats and liquid breaks.</p>
+    <span class="g" aria-hidden="true">&#10022;<br>&#8756;<br>&#8961;</span>
+    <p class="line">not near enough.<br>la-based label for warped beats and liquid breaks.<br><a href="https://keyspan.org">curated by keyspan</a></p>
   </div>
 
   <footer>
@@ -200,6 +197,7 @@ heaven</p>
   const video = document.getElementById("orbit");
   const still = new Image();
   still.src = "brand/nwh-orbit-still.jpg";
+  const INK = (c => { const m = c.trim().match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i); return m ? m.slice(1).map(h => parseInt(h, 16)) : [255, 255, 255]; })(getComputedStyle(document.documentElement).getPropertyValue("--ink"));
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) * 16);
   const cell = 4;        // CSS pixels per dither dot
   let tears = [];        // [rowStart, rowEnd, shift] dither rows slipped sideways during a tear
@@ -222,8 +220,8 @@ heaven</p>
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         const l = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114 - 18) * 1.7;
-        const v = l > BAYER[(y & 3) * 4 + (x & 3)] ? 0 : 255;   // inverted: chrome becomes black dots on white
-        d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+        const on = l <= BAYER[(y & 3) * 4 + (x & 3)];   // inverted: chrome becomes black dots in the ink
+        d[i] = on ? INK[0] : 0; d[i + 1] = on ? INK[1] : 0; d[i + 2] = on ? INK[2] : 0; d[i + 3] = 255;
       }
     }
     for (const [a, b, s] of tears) {
@@ -272,11 +270,11 @@ heaven</p>
     tears = [];
   };
   const paintSnow = () => {
-    snow.width = 220; snow.height = 120;
+    snow.width = Math.ceil(innerWidth / 4); snow.height = Math.ceil(innerHeight / 4);
     const img = snowCtx.createImageData(snow.width, snow.height);
     for (let i = 0; i < img.data.length; i += 4) {
-      const v = Math.random() < 0.5 ? 255 : 0;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+      const on = Math.random() < 0.5;
+      img.data[i] = on ? INK[0] : 0; img.data[i + 1] = on ? INK[1] : 0; img.data[i + 2] = on ? INK[2] : 0; img.data[i + 3] = 255;
     }
     snowCtx.putImageData(img, 0, 0);
   };
