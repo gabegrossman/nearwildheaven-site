@@ -19,7 +19,7 @@
 <style>
   /* Layout: same terminal printout as keyspan.org. One column, lowercase, one monospace face, black and white.
      The chrome render plays smooth around the label name (caps); inside the letters the same render
-     is redrawn as a low-res 1-bit dither. Occasional, gentle glitches. */
+     is redrawn as a low-res 1-bit dither. Every so often the picture takes a TV signal fault. */
   :root {
     --ground: #000000;
     --ink: #ffffff;
@@ -105,7 +105,7 @@
   .cut canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
   .cut .name { position: absolute; inset: 0; background: var(--ground); color: var(--ink); mix-blend-mode: multiply; }
   .outline { position: absolute; inset: 0; pointer-events: none; color: transparent; -webkit-text-stroke: 1px var(--stroke); }
-  .hero.tear .name { transform: translateX(var(--dx, 0)) skewX(var(--sk, 0)); }
+  .hero .snow { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; mix-blend-mode: screen; image-rendering: pixelated; pointer-events: none; }
 
   .strip { margin: 0; font-family: var(--glyph); color: var(--ink-muted); white-space: nowrap; overflow: hidden; letter-spacing: 0.1em; font-size: 12px; }
 
@@ -125,6 +125,14 @@
     .frame { padding: 10px; }
   }
 </style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="tv" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+    <feTurbulence id="tvNoise" type="fractalNoise" baseFrequency="0.0001 0.05" numOctaves="1" seed="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="1 0 0 0 0  0 0 0 0 0.5  0 0 0 0 0  0 0 0 0 1" result="h"/>
+    <feDisplacementMap id="tvDisp" in="SourceGraphic" in2="h" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
 
 <div class="page">
 
@@ -152,6 +160,7 @@ heaven</p>
         <p class="name outline" aria-hidden="true">near
 wild
 heaven</p>
+        <canvas class="snow" id="snow" aria-hidden="true"></canvas>
       </div>
     </div>
     <p class="strip" id="strip" aria-hidden="true"></p>
@@ -195,8 +204,8 @@ heaven</p>
   const still = new Image();
   still.src = "brand/nwh-orbit-still.jpg";
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) * 16);
-  let cell = 5;          // CSS pixels per dither dot; shifts a little during glitches
-  let tears = [];        // [rowStart, rowEnd, shift] bands slipped sideways during glitches
+  const cell = 4;        // CSS pixels per dither dot
+  let tears = [];        // [rowStart, rowEnd, shift] dither rows slipped sideways during a tear
 
   const source = () => (video.readyState >= 2 && !video.paused ? video : (still.complete && still.naturalWidth ? still : null));
 
@@ -249,42 +258,71 @@ heaven</p>
   if (document.readyState === "complete") setTimeout(startOrbit, 200);
   else addEventListener("load", () => setTimeout(startOrbit, 200), { once: true });
 
-  // ---- glitch: rare and gentle ----------------------------------------------------
-  // A few letters flip to block glyphs and back, the name slips a few pixels,
-  // the dither's dot size steps and one band of rows slides.
-  const layers = [...hero.querySelectorAll(".name")];
-  const FINAL = layers[0].textContent;
+  // ---- TV signal faults, every so often (never on hover) ---------------------------
+  // tear (sync loss bends horizontal bands), interlace (fine line jitter), static (snow over the picture),
+  // roll (vertical hold slips), flicker (signal fades and returns). The letters never change.
+  const tvNoise = document.getElementById("tvNoise");
+  const tvDisp = document.getElementById("tvDisp");
+  const snow = document.getElementById("snow");
+  const snowCtx = snow.getContext("2d");
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const reset = () => {
+    hero.style.filter = hero.style.transform = hero.style.opacity = hero.style.clipPath = "";
+    tvDisp.setAttribute("scale", "0");
+    snow.style.opacity = "0";
+    tears = [];
+  };
+  const paintSnow = () => {
+    snow.width = 220; snow.height = 120;
+    const img = snowCtx.createImageData(snow.width, snow.height);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.random() < 0.5 ? 255 : 0;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+    }
+    snowCtx.putImageData(img, 0, 0);
+  };
+  const displace = async (freqY, scaleMax, frames, slip) => {
+    hero.style.filter = "url(#tv)";
+    tvNoise.setAttribute("baseFrequency", `0.0001 ${freqY}`);
+    for (let n = 0; n < frames; n++) {
+      tvNoise.setAttribute("seed", String(Math.floor(rnd(1, 999))));
+      tvDisp.setAttribute("scale", String(rnd(scaleMax * 0.4, scaleMax)));
+      if (slip) {
+        const rows = canvas.height || 40, a = Math.floor(Math.random() * rows);
+        tears = [[a, a + 1 + Math.floor(Math.random() * rows * 0.06), Math.round(rnd(-4, 4))]];
+      }
+      await sleep(rnd(40, 80));
+    }
+  };
+  const FX = {
+    tear: () => displace(rnd(0.02, 0.06), 30, 5, true),
+    interlace: () => displace(0.35, 6, 6, false),
+    async static() {
+      snow.style.opacity = String(rnd(0.12, 0.25));
+      for (let n = 0; n < 7; n++) { paintSnow(); await sleep(45); }
+    },
+    async roll() {
+      for (const y of [6, 14, -4, 2, 0]) { hero.style.transform = `translateY(${y}px)`; await sleep(50); }
+    },
+    async flicker() {
+      for (const o of [0.45, 1, 0.7, 0.3, 1, 0.85, 1]) { hero.style.opacity = String(o); await sleep(rnd(35, 70)); }
+    },
+  };
+  const NAMES = Object.keys(FX);
+  const any = () => NAMES[Math.floor(Math.random() * NAMES.length)];
   let busy = false;
-  const glitch = (frames = 9) => {
+  const fault = async (name = any()) => {
     if (busy) return;
     busy = true;
-    let f = 0;
-    const tick = () => {
-      f++;
-      const solid = Math.floor((f / frames) * FINAL.length);
-      const text = [...FINAL].map((ch, i) => i < solid || ch === "\n" || Math.random() < 0.8 ? ch : pick()).join("");
-      for (const l of layers) l.textContent = text;
-      hero.classList.toggle("tear", f % 3 === 1 && f < frames - 1);
-      hero.style.setProperty("--dx", `${(Math.random() - 0.5) * 8}px`);
-      hero.style.setProperty("--sk", `${(Math.random() - 0.5) * 2}deg`);
-      cell = [4, 5, 6][Math.floor(Math.random() * 3)];
-      const rows = canvas.height || 40;
-      const a = Math.floor(Math.random() * rows);
-      tears = Math.random() < 0.6 ? [[a, a + 1 + Math.floor(Math.random() * rows * 0.08), Math.round((Math.random() - 0.5) * 10)]] : [];
-      if (f < frames) setTimeout(tick, 45);
-      else {
-        for (const l of layers) l.textContent = FINAL;
-        hero.classList.remove("tear");
-        cell = 5; tears = [];
-        busy = false;
-      }
-    };
-    tick();
+    try {
+      await FX[name]();
+      if (Math.random() < 0.2) { reset(); await sleep(rnd(80, 200)); await FX[any()](); }
+    } finally { reset(); busy = false; }
   };
-  setTimeout(() => glitch(14), 700);
-  const loop = () => setTimeout(() => { if (!document.hidden) glitch(); loop(); }, 7000 + Math.random() * 9000);
+  setTimeout(() => fault("tear"), 900);
+  const loop = () => setTimeout(() => { if (!document.hidden) fault(); loop(); }, 7000 + Math.random() * 9000);
   loop();
-  hero.addEventListener("mouseenter", () => glitch());
 
   // ---- glyph strip under the name: a carrier signal that keeps shifting -------------
   const strip = document.getElementById("strip");
