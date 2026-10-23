@@ -18,8 +18,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap">
 <style>
   /* Layout: same terminal printout as keyspan.org. One column, lowercase, one monospace face, black and white.
-     The label name (caps) is a window: inside the letters the chrome render plays smooth;
-     outside them the same render is redrawn as a low-res 1-bit dither. Occasional, gentle glitches. */
+     The chrome render plays smooth around the label name (caps); inside the letters the same render
+     is redrawn as a low-res 1-bit dither. Occasional, gentle glitches. */
   :root {
     --ground: #000000;
     --ink: #ffffff;
@@ -86,12 +86,12 @@
   .frame .bl { bottom: 0; left: 0; } .frame .br { bottom: 0; right: 0; }
 
   /* Layers, bottom to top:
-     1. canvas: dithered render, full area
-     2. .mask: the name in solid black, hiding the dither inside the letters
-     3. .cut (screen-blended): smooth render shown only through white letters on black
+     1. .smooth: the render as video (still image until it loads), full area
+     2. .mask: the name in solid black, hiding the smooth render inside the letters
+     3. .cut (screen-blended): the dithered canvas shown only through white letters on black
      4. .outline: thin stroke so the letters read when the chrome is elsewhere */
   .hero { position: relative; overflow: hidden; background: var(--ground); isolation: isolate; }
-  .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; opacity: 0.7; }
+  .hero .smooth { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .name {
     margin: 0;
     font: 700 clamp(52px, 15vw, 172px)/0.88 var(--mono);
@@ -102,7 +102,7 @@
   }
   .mask { position: relative; color: var(--ground); }
   .cut { position: absolute; inset: 0; mix-blend-mode: screen; isolation: isolate; background: var(--ground); }
-  .cut img, .cut video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cut canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
   .cut .name { position: absolute; inset: 0; background: var(--ground); color: var(--ink); mix-blend-mode: multiply; }
   .outline { position: absolute; inset: 0; pointer-events: none; color: transparent; -webkit-text-stroke: 1px var(--stroke); }
   .hero.tear .name { transform: translateX(var(--dx, 0)) skewX(var(--sk, 0)); }
@@ -138,13 +138,13 @@
       <span class="c tl" aria-hidden="true">&#9484;</span><span class="c tr" aria-hidden="true">&#9488;</span>
       <span class="c bl" aria-hidden="true">&#9492;</span><span class="c br" aria-hidden="true">&#9496;</span>
       <div class="hero" id="hero">
-        <canvas id="dither" aria-hidden="true"></canvas>
+        <img class="smooth" src="brand/nwh-orbit-still.jpg" alt="" aria-hidden="true">
+        <video class="smooth" id="orbit" muted loop playsinline preload="none" aria-hidden="true"></video>
         <h1 class="name mask" aria-label="Near Wild Heaven">near
 wild
 heaven</h1>
         <div class="cut" aria-hidden="true">
-          <img src="brand/nwh-orbit-still.jpg" alt="">
-          <video id="orbit" muted loop playsinline preload="none"></video>
+          <canvas id="dither"></canvas>
           <p class="name">near
 wild
 heaven</p>
@@ -185,7 +185,7 @@ heaven</p>
   const NOISE = "░▒▓█▀▄▌▐▖▗▘▝▚▞≡§∆∴¬✦⌁⟡";
   const pick = () => NOISE[Math.floor(Math.random() * NOISE.length)];
 
-  // ---- dithered render (outside the letters) --------------------------------------
+  // ---- dithered render (inside the letters) --------------------------------------
   // The chrome loop is drawn into a tiny canvas, thresholded against a 4x4 Bayer matrix to pure
   // black/white, and scaled back up with hard pixel edges. Before the video arrives, the still is used.
   const hero = document.getElementById("hero");
