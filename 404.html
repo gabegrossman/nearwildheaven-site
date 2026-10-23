@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Near Wild Heaven</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/nwh-mark-white.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  /* Same terminal printout as the home page: black, white, one monospace face, lowercase. */
+  :root {
+    --ground: #000000;
+    --ink: #ffffff;
+    --ink-muted: #a3a3a3;
+    --scan: rgba(255, 255, 255, 0.035);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --glyph: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 400 14px/1.6 var(--mono); text-transform: lowercase; -webkit-font-smoothing: antialiased;
+    display: grid; place-content: center;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, var(--scan) 0 1px, transparent 1px 3px); }
+  main { display: grid; gap: 18px; max-width: 60ch; }
+  h1 { margin: 0; font: 600 14px/1.6 var(--mono); letter-spacing: 0.12em; }
+  h1 .g, .g { font-family: var(--glyph); color: var(--ink-muted); letter-spacing: 0; font-weight: 400; }
+  p { margin: 0; color: var(--ink-muted); }
+  a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { background: var(--ink); color: var(--ground); text-decoration: none; }
+  a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="g" aria-hidden="true">&#9618;&#9617;</span> 404 &middot; signal lost</h1>
+  <p>nothing is broadcasting on this channel.</p>
+  <p><span class="g" aria-hidden="true">&#8961;</span> back to <a href="/">nearwildheaven.org</a></p>
+</main>
+</body>
+</html>
