@@ -26,6 +26,7 @@
     --ink: #ffffff;
     --ink-muted: #a3a3a3;
     --line: #333333;
+    --accent: #a3a3a3;
     --mask: #ffffff;
     --scan: rgba(255, 255, 255, 0.035);
     --band: rgba(255, 255, 255, 0.05);
@@ -60,7 +61,7 @@
   a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   a:hover { background: var(--ink); color: var(--ground); text-decoration: none; }
   a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  .g { font-family: var(--glyph); color: var(--ink-muted); }
+  .g { font-family: var(--glyph); color: var(--accent); }
 
   .page {
     min-height: 100%;
@@ -79,7 +80,7 @@
 
   .stage { align-self: center; display: grid; gap: 10px; }
   .frame { position: relative; padding: 14px; }
-  .frame .c { position: absolute; font-family: var(--glyph); color: var(--ink-muted); line-height: 1; font-size: 14px; }
+  .frame .c { position: absolute; font-family: var(--glyph); color: var(--accent); line-height: 1; font-size: 14px; }
   .frame .tl { top: 0; left: 0; } .frame .tr { top: 0; right: 0; }
   .frame .bl { bottom: 0; left: 0; } .frame .br { bottom: 0; right: 0; }
 
@@ -88,7 +89,7 @@
      2. .mask: the name in solid black, hiding the smooth render inside the letters
      3. .cut (screen-blended): the inverted dither (white, with black dots where the chrome is)
         shown only through the letters, so the name reads as solid blocks */
-  .hero { position: relative; overflow: hidden; background: var(--ground); isolation: isolate; }
+  .hero { position: relative; overflow: hidden; background: var(--ground); isolation: isolate; aspect-ratio: 16 / 9; }
   .hero .smooth { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .name {
     margin: 0;
@@ -98,13 +99,14 @@
     padding: 0.12em 0.06em 0.16em;
     white-space: pre;
   }
-  .mask { position: relative; color: var(--ground); }
+  .mask { color: var(--ground); }
+  .hero .name { position: absolute; inset: 0; display: grid; align-content: center; }
   .cut { position: absolute; inset: 0; mix-blend-mode: screen; isolation: isolate; background: var(--ground); }
   .cut canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
-  .cut .name { position: absolute; inset: 0; background: var(--ground); color: var(--mask); mix-blend-mode: multiply; }
+  .cut .name { background: var(--ground); color: var(--mask); mix-blend-mode: multiply; }
   .snow { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9; opacity: 0; mix-blend-mode: screen; image-rendering: pixelated; pointer-events: none; }
 
-  .strip { margin: 0; font-family: var(--glyph); color: var(--ink-muted); white-space: nowrap; overflow: hidden; letter-spacing: 0.1em; font-size: 12px; }
+  .strip { margin: 0; font-family: var(--glyph); color: var(--accent); white-space: nowrap; overflow: hidden; letter-spacing: 0.1em; font-size: 12px; }
 
   .copy { display: grid; grid-template-columns: auto 1fr; gap: 0 2ch; align-items: start; max-width: 70ch; }
   .copy .g { font-size: 13px; line-height: 1.85; }
@@ -162,7 +164,7 @@ heaven</p>
 
   <div class="copy">
     <span class="g" aria-hidden="true">&#10022;<br>&#8756;<br>&#8961;</span>
-    <p class="line">not near enough.<br>la-based label for warped beats and liquid breaks.<br><a href="https://keyspan.org">curated by keyspan</a></p>
+    <p class="line">not near enough.<br>la-based label for warped beats and liquid breaks.<br>curated by <a href="https://keyspan.org">keyspan</a></p>
   </div>
 
   <footer>
